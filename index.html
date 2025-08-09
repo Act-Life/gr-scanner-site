@@ -1,11 +1,91 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="UTF-8">
-    <title>GR Scanner</title>
-  </head>
-  <body>
-    <h1>Γεια σου Act!</h1>
-    <p>Η ιστοσελίδα σου είναι έτοιμη 🎉</p>
-  </body>
+<html lang="el">
+<head>
+  <meta charset="UTF-8">
+  <title>QR Scanner με Επιλογές</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #f0f0f0; text-align: center; }
+    h1 { color: #333; }
+    #reader { width: 300px; margin: 20px auto; }
+    #result { margin-top: 15px; font-weight: bold; color: #006400; }
+    input[type="file"], button { margin-top: 10px; padding: 8px 12px; }
+  </style>
+</head>
+<body>
+  <h1>📷 QR Scanner με Επιλογές</h1>
+
+  <h2>1️⃣ Σάρωση με Κάμερα</h2>
+  <div id="reader"></div>
+  <button onclick="startCamera()">Ξεκίνα Σάρωση</button>
+  <button onclick="stopCamera()">Σταμάτησε</button>
+
+  <h2>2️⃣ Ανέβασε Εικόνα QR</h2>
+  <input type="file" id="imageInput" accept="image/*">
+  <div id="result">🔍 Περιμένω σάρωση...</div>
+
+  <!-- html5-qrcode για κάμερα -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+  <!-- qr-scanner για εικόνες -->
+  <script type="module">
+    import QrScanner from "https://unpkg.com/qr-scanner@1.4.2/qr-scanner.min.js";
+
+    const imageInput = document.getElementById("imageInput");
+    const resultElement = document.getElementById("result");
+
+    imageInput.addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const result = await QrScanner.scanImage(file, { returnDetailedScanResult: true })
+        .catch(() => null);
+
+      if (result && result.data) {
+        resultElement.textContent = "📦 Από εικόνα: " + result.data;
+      } else {
+        resultElement.textContent = "❌ Δεν βρέθηκε QR στην εικόνα.";
+      }
+    });
+
+    let html5QrCode;
+    function startCamera() {
+      html5QrCode = new Html5Qrcode("reader");
+      Html5Qrcode.getCameras().then(devices => {
+        if (devices && devices.length) {
+          const cameraId = devices[0].id;
+          html5QrCode.start(
+            cameraId,
+            { fps: 10, qrbox: 250 },
+            qrCodeMessage => {
+              resultElement.textContent = "📦 Από κάμερα: " + qrCodeMessage;
+            },
+            errorMessage => {
+              console.warn("Σφάλμα σάρωσης: ", errorMessage);
+            }
+          ).catch(err => {
+            console.error("Σφάλμα εκκίνησης κάμερας: ", err);
+            alert("❌ Δεν ήταν δυνατή η εκκίνηση της κάμερας.");
+          });
+        } else {
+          alert("❌ Δεν βρέθηκε διαθέσιμη κάμερα.");
+        }
+      }).catch(err => {
+        console.error("Σφάλμα λήψης καμερών: ", err);
+        alert("❌ Σφάλμα κατά την αναζήτηση καμερών.");
+      });
+    }
+
+    function stopCamera() {
+      if (html5QrCode) {
+        html5QrCode.stop().then(() => {
+          html5QrCode.clear();
+          resultElement.textContent = "🛑 Η κάμερα σταμάτησε.";
+        }).catch(err => {
+          console.error("Σφάλμα διακοπής κάμερας: ", err);
+        });
+      }
+    }
+  </script>
+</body>
 </html>
